@@ -1,0 +1,6 @@
+fastapi
+pydantic
+pyserial
+pymodbus
+google-generativeai
+uvicorn
