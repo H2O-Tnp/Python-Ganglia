@@ -10,11 +10,11 @@ if [ ! -z "$PIDS" ]; then
 fi
 
 # Use the virtual environment Python if it exists
-PYTHON_CMD="python3"
-if [ -f ".venv/bin/python3" ]; then
-    PYTHON_CMD=".venv/bin/python3"
-elif [ -f "venv/bin/python3" ]; then
-    PYTHON_CMD="venv/bin/python3"
+PYTHON_CMD="python"
+if [ -f ".venv/bin/python" ]; then
+    PYTHON_CMD=".venv/bin/python"
+elif [ -f "venv/bin/python" ]; then
+    PYTHON_CMD="venv/bin/python"
 fi
 
 echo "Using python: $PYTHON_CMD"

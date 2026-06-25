@@ -10,11 +10,11 @@ if [ ! -z "$PIDS" ]; then
 fi
 
 # Use the virtual environment Python if it exists
-PYTHON_CMD="python3"
-if [ -f ".venv/bin/python3" ]; then
-    PYTHON_CMD=".venv/bin/python3"
-elif [ -f "venv/bin/python3" ]; then
-    PYTHON_CMD="venv/bin/python3"
+PYTHON_CMD="python"
+if [ -f ".venv/bin/python" ]; then
+    PYTHON_CMD=".venv/bin/python"
+elif [ -f "venv/bin/python" ]; then
+    PYTHON_CMD="venv/bin/python"
 fi
 
 echo "Using python: $PYTHON_CMD"
@@ -31,7 +31,7 @@ echo ""
 echo "✅ Server is running (PID: $SERVER_PID)!"
 echo "🌐 Open your web browser to: http://127.0.0.1:8000"
 echo "💻 To run the automated tuning test, open a NEW terminal window and run:"
-echo "   python3 scripts/cli_api.py --sequence"
+echo "   python scripts/cli_api.py --sequence"
 echo ""
 echo "Press Ctrl+C here at any time to shut down the server."
 

@@ -5,7 +5,7 @@ Runs a battery of 10 excitation tests against the real motor and logs
 all telemetry to sysid_data/*.ndjson for offline model fitting.
 
 Usage:
-    .venv/bin/python3 sysid_agent.py [--max-rpm 200] [--skip-cogging] [--skip-hysteresis]
+    .venv/bin/python sysid_agent.py [--max-rpm 200] [--skip-cogging] [--skip-hysteresis]
 
 Steps:
     1. PRBS (PWM open-loop) — broadband linear dynamics
@@ -652,7 +652,7 @@ async def run_sysid(args):
     log("\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
     log("  ✅ All excitation tests complete!")
     log(f"  Data saved to: {DATA_DIR.resolve()}")
-    log("  Next: run  .venv/bin/python3 scripts/model_fitter.py")
+    log("  Next: run  .venv/bin/python scripts/model_fitter.py")
     log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
 
 if __name__ == "__main__":

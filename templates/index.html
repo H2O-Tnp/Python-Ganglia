@@ -43,6 +43,7 @@
                 <button id="btn-agent" onclick="switchTab('agent', -2)">Velocity-Agent</button>
                 <button id="btn-cur" onclick="switchTab('cur', -3)">Current</button>
                 <button id="btn-pwm" onclick="switchTab('pwm', 0)">PWM</button>
+                <button id="btn-mpc" onclick="switchTab('mpc', 3)">MPC</button>
                 <button id="btn-tune" onclick="switchTab('tune', 0)">Auto-Tune</button>
                 <button id="btn-sysid" onclick="switchTab('sysid', 7)">SysID</button>
             </div>
@@ -232,6 +233,37 @@
                         oninput="syncInput('numPwm', 'valPwm')" onkeydown="if(event.key==='Enter') setPWM()"><br><input
                         type="range" id="valPwm" min="-4000" max="4000" step="1" value="0"
                         oninput="syncInput('valPwm', 'numPwm')" onchange="setPWM()"></div>
+            </div>
+
+            <div id="tab-mpc" class="tab-content">
+                <h3>Model Predictive Control (Velocity)</h3>
+                <div class="glass-panel border-sky">
+                    <strong class="text-sky">MPC Weights (Q & R)</strong><br>
+                    <div class="grid-adrc">
+                        <span class="font-bold text-xs">Q Velocity</span>
+                        <input type="number" id="mpc_q_vel" step="0.1" value="1.0" oninput="syncInput('mpc_q_vel', 'slider_mpc_q_vel')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_q_vel" min="0" max="100" step="0.1" value="1.0" oninput="syncInput('slider_mpc_q_vel', 'mpc_q_vel')" onchange="setMPC()">
+
+                        <span class="font-bold text-xs">R Control</span>
+                        <input type="number" id="mpc_r_ctrl" step="0.01" value="0.01" oninput="syncInput('mpc_r_ctrl', 'slider_mpc_r_ctrl')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_r_ctrl" min="0" max="1" step="0.01" value="0.01" oninput="syncInput('slider_mpc_r_ctrl', 'mpc_r_ctrl')" onchange="setMPC()">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <span class="font-bold text-xs">Prediction Horizon (N):</span>
+                    <input type="number" id="mpc_horizon" value="10" min="2" max="50" onchange="setMPC()" onkeydown="if(event.key==='Enter') setMPC()" class="w-15 p-1 text-center">
+                </div>
+
+                <div class="glass-panel border-emerald">
+                    <strong class="text-emerald">Targets</strong><br>
+                    <div class="grid-adrc">
+                        <span class="font-bold text-xs">Vel (RPM)</span>
+                        <input type="number" id="mpc_trg_vel" value="200" oninput="syncInput('mpc_trg_vel', 'slider_mpc_trg_vel')" onkeydown="if(event.key==='Enter') setMPCTarget()"><input type="range" id="slider_mpc_trg_vel" min="-4000" max="4000" step="1" value="200" oninput="syncInput('slider_mpc_trg_vel', 'mpc_trg_vel')" onchange="setMPCTarget()">
+                    </div>
+                </div>
+                
+                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px; overflow-x: hidden;">
+                    <div class="chart-wrapper" style="height: 250px; min-height: 250px;"><canvas id="mpcPredChart"></canvas></div>
+                </div>
             </div>
 
             <div id="tab-tune" class="tab-content">
@@ -525,6 +557,24 @@
             await fetch('/set_adrc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         }
 
+        async function setMPC() {
+            const q_pos = 0.0;
+            const q_vel = parseFloat(document.getElementById('mpc_q_vel').value) || 0;
+            const q_cur = 0.0;
+            const r_ctrl = parseFloat(document.getElementById('mpc_r_ctrl').value) || 0;
+            const horizon = parseInt(document.getElementById('mpc_horizon').value) || 10;
+            const payload = { q_pos: q_pos, q_vel: q_vel, q_cur: q_cur, r_ctrl: r_ctrl, horizon: horizon };
+            await fetch('/set_mpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        }
+
+        async function setMPCTarget() {
+            const target_pos = 0.0;
+            const target_vel = parseFloat(document.getElementById('mpc_trg_vel').value) || 0;
+            const target_cur = 0.0;
+            const payload = { target_pos: target_pos, target_vel: target_vel, target_cur: target_cur };
+            await fetch('/set_mpc_target', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        }
+
         // CSV Export functionality replacing BatchProcessor
         function exportCSV() {
             if (exportDataBuffer.length === 0) {
@@ -622,6 +672,7 @@
         const agentWcChart = createChart('agentWcChart', 'Bandwidth Wc', '#0284c7');
         const agentB0Chart = createChart('agentB0Chart', 'System Gain b0', '#10b981');
         const agentRampChart = createChart('agentRampChart', 'Ramp Time (s)', '#8b5cf6');
+        const mpcPredChart = createChart('mpcPredChart', 'MPC Predicted Velocity (RPM)', '#4f46e5');
 
         async function refreshPorts() {
             try {
@@ -779,6 +830,12 @@
 
                         // Push to incoming buffer for rendering
                         incomingBuffer.push(pt);
+                        
+                        if (pt.mpc_pred_vel && pt.mpc_pred_vel.length > 0 && document.getElementById('tab-mpc').classList.contains('active')) {
+                            mpcPredChart.data.labels = pt.mpc_pred_vel.map((_, idx) => "t+" + idx);
+                            mpcPredChart.data.datasets[0].data = pt.mpc_pred_vel;
+                            mpcPredChart.update('none');
+                        }
                     }
                 }
                 chartDirty = true;

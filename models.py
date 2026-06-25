@@ -19,6 +19,18 @@ class ADRCRequest(BaseModel):
     b0: float
     ramp_time: float
 
+class MPCRequest(BaseModel):
+    q_pos: float
+    q_vel: float
+    q_cur: float
+    r_ctrl: float
+    horizon: int
+
+class MPCTargetRequest(BaseModel):
+    target_pos: float
+    target_vel: float
+    target_cur: float
+
 class TargetRequest(BaseModel):
     mode: str
     value: float

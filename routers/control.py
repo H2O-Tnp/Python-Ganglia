@@ -9,6 +9,16 @@ from modbus_handler import get_modbus, active_ws_queues, active_ws_queues_lock, 
 
 router = APIRouter()
 
+@router.get("/api/state")
+def get_state():
+    with agent_state_lock:
+        return {
+            "target_velocity": agent_state.get("agent_target", 0.0),
+            "adrc_wc": agent_state.get("agent_wc", 0.0),
+            "adrc_b0": agent_state.get("agent_b0", 0.0),
+            "ramp_time": agent_state.get("agent_ramp", 0.0)
+        }
+
 @router.post("/invert_encoder")
 def invert_encoder(req: InvertRequest):
     modbus_client, device_id, modbus_lock = get_modbus()
@@ -103,6 +113,34 @@ def set_adrc(req: ADRCRequest):
             agent_state["agent_wc"] = req.wc
             agent_state["agent_b0"] = req.b0
             agent_state["agent_ramp"] = req.ramp_time
+
+    return {"status": "success"}
+
+@router.post("/set_mpc")
+def set_mpc(req: MPCRequest):
+    modbus_client, device_id, modbus_lock = get_modbus()
+    with modbus_lock:
+        if not modbus_client or not modbus_client.connected:
+            return {"error": "Not connected"}
+        
+        # Pack Q_pos, Q_vel, Q_cur, R_ctrl, Horizon into 10 registers (2 bytes each)
+        packed_bytes = struct.pack("<ffffi", req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
+        registers = struct.unpack("<10H", packed_bytes)
+        modbus_client.write_registers(address=500, values=list(registers), device_id=device_id)
+
+    return {"status": "success"}
+
+@router.post("/set_mpc_target")
+def set_mpc_target(req: MPCTargetRequest):
+    modbus_client, device_id, modbus_lock = get_modbus()
+    with modbus_lock:
+        if not modbus_client or not modbus_client.connected:
+            return {"error": "Not connected"}
+        
+        # Pack target_pos, target_vel, target_cur into 6 registers
+        packed_bytes = struct.pack("<fff", req.target_pos, req.target_vel, req.target_cur)
+        registers = struct.unpack("<6H", packed_bytes)
+        modbus_client.write_registers(address=510, values=list(registers), device_id=device_id)
 
     return {"status": "success"}
 

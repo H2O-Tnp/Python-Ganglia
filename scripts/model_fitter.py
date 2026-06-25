@@ -20,7 +20,7 @@ Physics model fitted:
 Noise model:  σ(ω) = σ0 + σ1·|ω|
 
 Usage:
-    .venv/bin/python3 model_fitter.py [--data-dir sysid_data] [--no-plots]
+    .venv/bin/python model_fitter.py [--data-dir sysid_data] [--no-plots]
 """
 import argparse
 import json
@@ -588,7 +588,7 @@ def main():
     if not args.no_plots:
         make_plots(datasets, model)
 
-    print("\n  Next: launch the sim with  .venv/bin/python3 mock_sim.py")
+    print("\n  Next: launch the sim with  .venv/bin/python mock_sim.py")
     print("  The sim will automatically load motor_model.json")
 
 if __name__ == "__main__":

@@ -37,10 +37,11 @@ Control Theory Guide for ADRC:
 2. 'b0' (System Gain): Represents how easily the motor accelerates. Higher b0 means the controller expects the motor to be easy to move, so it applies LESS control effort. If b0 is too high, the motor may stall or under-react. If b0 is too low, the motor may overshoot or oscillate. Bounds: [1.0, 50.0].
 3. 'ramp_time': Defines the acceleration profile (seconds to reach full speed). Usually 0.0 for pure steady-state tuning. Bounds: [0.0, 5.0].
 
-Analyze the statistical telemetry provided. 
-If the standard deviation of velocity is high, the system is oscillating. Try reducing wc or modifying b0.
-If the mean velocity is significantly below the target, it might be stalling because control effort is too low (b0 is too high).
-Only make small adjustments per step (e.g., +/- 10-20%).
+Analyze the statistical telemetry provided, as well as your recent HISTORY of changes.
+- If the standard deviation of velocity is high, the system is oscillating. Try reducing wc or modifying b0.
+- If the mean velocity is significantly below the target, it might be stalling because control effort is too low (b0 is too high).
+- If your previous change made the standard deviation or steady-state error WORSE, reverse your previous action.
+- Only make small adjustments per step (e.g., +/- 10-20%).
 
 CRITICAL RULE: If a "USER INSTRUCTION" is provided that requests a specific target velocity, you MUST output exactly that requested target_velocity. Do NOT invent your own step responses or override the user's requested velocity for tuning purposes!
 """
@@ -49,7 +50,12 @@ async def measure_telemetry(duration=3.0):
     velocities = []
     currents = []
     
-    current_state = {}
+    current_state = {
+        "target": 0,
+        "wc": 0,
+        "b0": 0,
+        "ramp_time": 0.0
+    }
     try:
         async with websockets.connect(WS_URL) as ws:
             start_time = time.time()
@@ -86,7 +92,10 @@ async def measure_telemetry(duration=3.0):
     stats = {
         "velocity_mean": statistics.mean(velocities),
         "velocity_stdev": statistics.stdev(velocities) if len(velocities) > 1 else 0.0,
-        "current_mean": statistics.mean(currents),
+        "velocity_min": min(velocities),
+        "velocity_max": max(velocities),
+        "error_mean": statistics.mean([current_state["target"] - v for v in velocities]),
+        "current_mean": statistics.mean(currents) if currents else 0.0,
         "current_stdev": statistics.stdev(currents) if len(currents) > 1 else 0.0,
     }
     return stats, current_state
@@ -115,6 +124,7 @@ def set_adrc(wc, b0, ramp=0.0, target=None):
 
 async def agent_loop():
     log_to_ui("Starting GenAI Agentic Tuner Loop...")
+    history = []
     while True:
         log_to_ui("\n--- Observing Telemetry (10s) ---")
         stats, state = await measure_telemetry(10.0)
@@ -125,7 +135,7 @@ async def agent_loop():
             continue
             
         log_to_ui(f"State: Target RPM = {state['target']}, wc = {state['wc']}, b0 = {state['b0']}")
-        log_to_ui(f"Stats: Vel Mean = {stats['velocity_mean']:.2f}, Vel Stdev = {stats['velocity_stdev']:.2f}")
+        log_to_ui(f"Stats: Vel Mean = {stats['velocity_mean']:.2f}, Vel Stdev = {stats['velocity_stdev']:.2f}, Error Mean = {stats['error_mean']:.2f}")
         
         prompt = f"""Current Tuning State:
 Target Velocity: {state['target']} RPM
@@ -136,10 +146,18 @@ ramp_time: {state['ramp_time']}
 Observed Telemetry (Last 10 seconds):
 Velocity Mean: {stats['velocity_mean']:.2f} RPM
 Velocity Stdev: {stats['velocity_stdev']:.2f} RPM
+Velocity Min/Max: {stats['velocity_min']:.2f} / {stats['velocity_max']:.2f} RPM
+Steady-State Error Mean: {stats['error_mean']:.2f} RPM
 Current Mean: {stats['current_mean']:.2f} mA
 Current Stdev: {stats['current_stdev']:.2f} mA
 
-Based on this, please provide the next wc, b0, ramp_time, and target_velocity to improve stability and tracking."""
+"""
+        if history:
+            prompt += "RECENT TUNING HISTORY:\n"
+            for i, h in enumerate(history[-3:]):
+                prompt += f"Step -{len(history[-3:])-i}: wc={h['state']['wc']}, b0={h['state']['b0']} -> Vel Stdev={h['stats']['velocity_stdev']:.2f}, Error={h['stats']['error_mean']:.2f}\n"
+        
+        prompt += "\nBased on this, please provide the next wc, b0, ramp_time, and target_velocity to improve stability and tracking."
 
         user_prompt = ""
         try:
@@ -157,7 +175,7 @@ Based on this, please provide the next wc, b0, ramp_time, and target_velocity to
         log_to_ui("Querying Gemini Agent...")
         try:
             response = client.models.generate_content(
-                model='gemini-flash-lite-latest',
+                model='gemini-2.5-pro',
                 contents=[
                     types.Content(role="user", parts=[types.Part.from_text(text=SYSTEM_PROMPT + "\n\n" + prompt)])
                 ],
@@ -170,6 +188,14 @@ Based on this, please provide the next wc, b0, ramp_time, and target_velocity to
             
             result = response.parsed
             log_to_ui(f"🤖 Agent Reasoning: {result.reasoning}")
+            
+            history.append({
+                "state": state,
+                "stats": stats,
+                "action": {"wc": result.wc, "b0": result.b0}
+            })
+            if len(history) > 5:
+                history.pop(0)
             
             set_adrc(result.wc, result.b0, result.ramp_time, result.target_velocity)
             
