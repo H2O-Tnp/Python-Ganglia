@@ -98,7 +98,7 @@ sim_state = {
     "mpc_q_pos": 1.0,
     "mpc_q_vel": 1.0,
     "mpc_q_cur": 0.1,
-    "mpc_r_ctrl": 0.01,
+    "mpc_r_ctrl": 1.0,
     "mpc_horizon": 10,
     "mpc_target_pos": 0.0,
     "mpc_target_vel": 0.0,

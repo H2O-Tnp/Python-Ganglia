@@ -139,9 +139,17 @@ def set_mpc(req: MPCRequest):
                 pass
     return {"status": "success"}
 
+@router.post("/set_rpm_cap")
+def set_rpm_cap(req: RPMCapRequest):
+    with agent_state_lock:
+        agent_state["rpm_cap"] = req.cap
+    return {"status": "success"}
+
 @router.post("/set_mpc_target")
 def set_mpc_target(req: MPCTargetRequest):
-    global_mpc.update_target(req.target_pos, req.target_vel, req.target_cur)
+    cap = agent_state.get("rpm_cap", 4000.0)
+    target_vel = max(-cap, min(cap, req.target_vel))
+    global_mpc.update_target(req.target_pos, target_vel, req.target_cur)
     modbus_client, device_id, modbus_lock = get_modbus()
     with modbus_lock:
         if modbus_client and modbus_client.connected:
@@ -167,16 +175,21 @@ def set_target(req: TargetRequest):
         }
         addr = addresses.get(req.mode)
         
+        val = req.value
+        if req.mode == "velocity":
+            cap = agent_state.get("rpm_cap", 4000.0)
+            val = max(-cap, min(cap, val))
+        
         POSITION_TRANSFER_SCALE = 1.0
         VELOCITY_TRANSFER_SCALE = 10.0
         CURRENT_TRANSFER_SCALE  = 1.0
         
         if req.mode == "position":
-            scaled_value = int(req.value * POSITION_TRANSFER_SCALE)
+            scaled_value = int(val * POSITION_TRANSFER_SCALE)
         elif req.mode == "velocity":
-            scaled_value = int(req.value * VELOCITY_TRANSFER_SCALE)
+            scaled_value = int(val * VELOCITY_TRANSFER_SCALE)
         else:
-            scaled_value = int(req.value * CURRENT_TRANSFER_SCALE)
+            scaled_value = int(val * CURRENT_TRANSFER_SCALE)
             
         packed_bytes = struct.pack("<iii", scaled_value, int(req.min_limit), int(req.max_limit))
         registers = struct.unpack("<6H", packed_bytes)

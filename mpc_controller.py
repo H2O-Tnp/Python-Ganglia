@@ -91,7 +91,7 @@ class MPCState:
         self.q_pos = 1.0
         self.q_vel = 1.0
         self.q_cur = 0.1
-        self.r_ctrl = 0.01
+        self.r_ctrl = 1.0
         self.horizon = 10
         
         self.target_pos = 0.0

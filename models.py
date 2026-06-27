@@ -57,6 +57,9 @@ class ChatRequest(BaseModel):
     message: str
     context: dict
 
+class RPMCapRequest(BaseModel):
+    cap: float
+
 class TransferRequest(BaseModel):
     mode: str
     c_pid0: float
