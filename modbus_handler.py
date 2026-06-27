@@ -5,6 +5,7 @@ import queue
 from pymodbus.client import ModbusSerialClient
 from pymodbus import FramerType
 from config import *
+from mpc_controller import global_mpc
 
 # ---------------------------------------------------------
 # Global Modbus State
@@ -21,6 +22,7 @@ agent_state = {
     "agent_wc": 10.0,
     "agent_b0": 1.0,
     "agent_ramp": 2.0,
+    "mpc_active": False,
 }
 agent_state_lock = threading.Lock()
 
@@ -88,6 +90,24 @@ def modbus_polling_worker():
 
             ADC_TO_MA = 4.698555425 
             actual_current = raw_current * ADC_TO_MA
+
+            # --- MPC Logic ---
+            mpc_active = False
+            with agent_state_lock:
+                mpc_active = agent_state.get("mpc_active", False)
+                
+            if mpc_active:
+                if not hasattr(modbus_polling_worker, "last_mpc_time"):
+                    modbus_polling_worker.last_mpc_time = 0
+                current_time = time.time()
+                if current_time - modbus_polling_worker.last_mpc_time >= 0.01:
+                    modbus_polling_worker.last_mpc_time = current_time
+                    voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, actual_current)
+                    pwm_val = int((voltage / max_v) * 4000.0)
+                    pwm_val = max(min(pwm_val, 4000), -4000)
+                    val = struct.unpack("<H", struct.pack("<h", pwm_val))[0]
+                    with modbus_lock:
+                        modbus_client.write_register(ADDR_PWM_VAL, val, device_id=DEVICE_ID)
 
             with agent_state_lock:
                 telemetry_data_point = {

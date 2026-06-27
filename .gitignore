@@ -5,6 +5,7 @@ __pycache__/
 venv/
 ENV/
 env/
+software/
 .env
 .DS_Store
 

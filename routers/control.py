@@ -6,6 +6,7 @@ from fastapi import APIRouter
 from config import *
 from models import *
 from modbus_handler import get_modbus, active_ws_queues, active_ws_queues_lock, agent_state, agent_state_lock
+from mpc_controller import global_mpc
 
 router = APIRouter()
 
@@ -61,7 +62,12 @@ def set_op_mode(req: OpModeRequest):
         modbus_client.write_coil(4,  req.mode == -1, device_id=device_id)
         modbus_client.write_coil(5,  req.mode == -2, device_id=device_id)
         modbus_client.write_coil(6,  req.mode == -3, device_id=device_id)
-        mode_val = struct.unpack("<H", struct.pack("<h", req.mode))[0]
+        
+        with agent_state_lock:
+            agent_state["mpc_active"] = (req.mode == 3)
+            
+        hardware_mode = 0 if req.mode == 3 else req.mode
+        mode_val = struct.unpack("<H", struct.pack("<h", hardware_mode))[0]
         modbus_client.write_register(ADDR_OP_MODE, mode_val, device_id=device_id)
 
         if req.mode != 7:
@@ -118,30 +124,33 @@ def set_adrc(req: ADRCRequest):
 
 @router.post("/set_mpc")
 def set_mpc(req: MPCRequest):
+    global_mpc.update_params(req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
+    # We still send to mock sim if it's connected, but on real hardware this address might not exist.
+    # To avoid errors on real hardware if address 400 doesn't exist, we can just try-except or ignore.
     modbus_client, device_id, modbus_lock = get_modbus()
     with modbus_lock:
-        if not modbus_client or not modbus_client.connected:
-            return {"error": "Not connected"}
-        
-        # Pack Q_pos, Q_vel, Q_cur, R_ctrl, Horizon into 10 registers (2 bytes each)
-        packed_bytes = struct.pack("<ffffi", req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
-        registers = struct.unpack("<10H", packed_bytes)
-        modbus_client.write_registers(address=500, values=list(registers), device_id=device_id)
-
+        if modbus_client and modbus_client.connected:
+            packed_bytes = struct.pack("<ffffi", req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
+            registers = struct.unpack("<10H", packed_bytes)
+            # This write is mainly for the mock simulator to stay in sync
+            try:
+                modbus_client.write_registers(address=400, values=list(registers), device_id=device_id)
+            except Exception:
+                pass
     return {"status": "success"}
 
 @router.post("/set_mpc_target")
 def set_mpc_target(req: MPCTargetRequest):
+    global_mpc.update_target(req.target_pos, req.target_vel, req.target_cur)
     modbus_client, device_id, modbus_lock = get_modbus()
     with modbus_lock:
-        if not modbus_client or not modbus_client.connected:
-            return {"error": "Not connected"}
-        
-        # Pack target_pos, target_vel, target_cur into 6 registers
-        packed_bytes = struct.pack("<fff", req.target_pos, req.target_vel, req.target_cur)
-        registers = struct.unpack("<6H", packed_bytes)
-        modbus_client.write_registers(address=510, values=list(registers), device_id=device_id)
-
+        if modbus_client and modbus_client.connected:
+            packed_bytes = struct.pack("<fff", req.target_pos, req.target_vel, req.target_cur)
+            registers = struct.unpack("<6H", packed_bytes)
+            try:
+                modbus_client.write_registers(address=410, values=list(registers), device_id=device_id)
+            except Exception:
+                pass
     return {"status": "success"}
 
 @router.post("/set_target")

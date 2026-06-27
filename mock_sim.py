@@ -110,65 +110,9 @@ telemetry_history = collections.deque(maxlen=1000)
 state_lock = threading.Lock()
 
 # ---------------------------------------------------------
-# MPC Helper Functions
+# MPC Helper Functions (Moved to mpc_controller.py)
 # ---------------------------------------------------------
-def build_mpc_matrices(M, dt, N, Q_diag, R_val):
-    R_m = M["R"]; L = M["L"]; Ke = M["Ke"]; Kt = M["Kt"]
-    J = M["J"]; B = M["B"]
-    
-    Ac = np.array([
-        [-B/J, Kt/J],
-        [-Ke/L, -R_m/L]
-    ])
-    Bc = np.array([[0], [1/L]])
-    Cc = np.eye(2)
-    Dc = np.zeros((2,1))
-    
-    sys_d = cont2discrete((Ac, Bc, Cc, Dc), dt, method='zoh')
-    Ad, Bd = sys_d[0], sys_d[1]
-    
-    nx = 2
-    nu = 1
-    Sx = np.zeros((N * nx, nx))
-    Su = np.zeros((N * nx, N * nu))
-    
-    A_pow = Ad
-    for i in range(N):
-        Sx[i*nx:(i+1)*nx, :] = A_pow
-        for j in range(i+1):
-            if j == i:
-                Su[i*nx:(i+1)*nx, j*nu:(j+1)*nu] = Bd
-            else:
-                Su[i*nx:(i+1)*nx, j*nu:(j+1)*nu] = np.linalg.matrix_power(Ad, i-j) @ Bd
-        A_pow = A_pow @ Ad
-        
-    Q_bar = np.kron(np.eye(N), np.diag(Q_diag))
-    R_bar = np.kron(np.eye(N), np.array([[R_val]]))
-    
-    H = 2 * (Su.T @ Q_bar @ Su + R_bar)
-    L_lip = np.max(np.linalg.eigvalsh(H))
-    
-    return Ad, Bd, Sx, Su, Q_bar, H, L_lip
-
-def solve_qp_fgm(H, g, lb, ub, max_iter=20):
-    L_lip = np.max(np.linalg.eigvalsh(H))
-    alpha = 1.0 / L_lip
-    
-    U = np.zeros_like(g)
-    Y = np.zeros_like(g)
-    t = 1.0
-    
-    for _ in range(max_iter):
-        U_next = Y - alpha * (H @ Y + g)
-        U_next = np.clip(U_next, lb, ub)
-        
-        t_next = (1.0 + np.sqrt(1.0 + 4.0 * t**2)) / 2.0
-        Y = U_next + ((t - 1.0) / t_next) * (U_next - U)
-        
-        U = U_next
-        t = t_next
-        
-    return U
+from mpc_controller import global_mpc
 
 # ---------------------------------------------------------
 # Simulation Physics Thread
@@ -258,51 +202,9 @@ def physics_loop():
                     voltage = (1.0 - blend_ratio) * pid_voltage + blend_ratio * adrc_voltage
                     sim_state["last_voltage"] = voltage
                 elif mode == 3: # MPC
-                    rebuild = False
-                    if "mpc_cache" not in sim_state:
-                        rebuild = True
-                    else:
-                        cache = sim_state["mpc_cache"]
-                        if (cache["N"] != sim_state["mpc_horizon"] or
-                            cache["q_pos"] != sim_state["mpc_q_pos"] or
-                            cache["q_vel"] != sim_state["mpc_q_vel"] or
-                            cache["q_cur"] != sim_state["mpc_q_cur"] or
-                            cache["r_ctrl"] != sim_state["mpc_r_ctrl"]):
-                            rebuild = True
-                            
-                    if rebuild:
-                        N = int(sim_state.get("mpc_horizon", 10))
-                        # Q_diag is [Q_vel, Q_cur]
-                        q_diag = [sim_state.get("mpc_q_vel", 1.0),
-                                  sim_state.get("mpc_q_cur", 0.0)]
-                        r_val = sim_state.get("mpc_r_ctrl", 0.01)
-                        
-                        Ad, Bd, Sx, Su, Q_bar, H, L_lip = build_mpc_matrices(M, dt, N, q_diag, r_val)
-                        sim_state["mpc_cache"] = {
-                            "N": N, "q_vel": q_diag[0], "q_cur": q_diag[1], "r_ctrl": r_val,
-                            "Sx": Sx, "Su": Su, "Q_bar": Q_bar, "H": H, "L_lip": L_lip
-                        }
-                    
-                    cache = sim_state["mpc_cache"]
-                    Sx, Su, Q_bar, H = cache["Sx"], cache["Su"], cache["Q_bar"], cache["H"]
-                    N = cache["N"]
-                    
-                    x0 = np.array([[sim_state["velocity"]], [sim_state.get("current_A", 0.0)]])
-                    trg_vel = sim_state.get("mpc_target_vel", 0.0)
-                    # We only care about velocity target. Current target is 0 but we don't penalize it heavily.
-                    Xr = np.tile(np.array([[trg_vel], [0.0]]), (N, 1))
-                    
-                    g = 2 * Su.T @ Q_bar @ (Sx @ x0 - Xr)
-                    
-                    lb = -MAX_VOLTAGE
-                    ub = MAX_VOLTAGE
-                    
-                    U_opt = solve_qp_fgm(H, g, lb, ub, max_iter=20)
-                    voltage = U_opt[0, 0]
+                    # We are using global_mpc from mpc_controller
+                    voltage, pred_vel, max_v = global_mpc.compute_step(sim_state["velocity"], sim_state.get("current_A", 0.0))
                     sim_state["last_voltage"] = voltage
-                    
-                    X_pred = Sx @ x0 + Su @ U_opt
-                    pred_vel = X_pred[0::2, 0].tolist()
                     sim_state["mpc_pred_vel"] = pred_vel
             
             # ── Nonlinear Motor Physics ──────────────────────────────────────
@@ -495,6 +397,7 @@ class MockModbusClient:
                     sim_state["mpc_q_cur"] = q_c
                     sim_state["mpc_r_ctrl"] = r_c
                     sim_state["mpc_horizon"] = max(1, min(50, horizon))
+                    global_mpc.update_params(q_p, q_v, q_c, r_c, max(1, min(50, horizon)))
             if address == 510:
                 if len(values) >= 6:
                     b = struct.pack("<6H", *values[:6])
@@ -502,6 +405,7 @@ class MockModbusClient:
                     sim_state["mpc_target_pos"] = t_p
                     sim_state["mpc_target_vel"] = t_v
                     sim_state["mpc_target_cur"] = t_c
+                    global_mpc.update_target(t_p, t_v, t_c)
 
 pymodbus.client.ModbusSerialClient = MockModbusClient
 
