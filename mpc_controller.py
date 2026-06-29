@@ -63,8 +63,7 @@ def build_mpc_matrices(M, dt, N, Q_diag, R_val):
     
     return Ad, Bd, Sx, Su, Q_bar, H, L_lip
 
-def solve_qp_fgm(H, g, lb, ub, max_iter=20):
-    L_lip = np.max(np.linalg.eigvalsh(H))
+def solve_qp_fgm(H, g, lb, ub, L_lip, max_iter=20):
     alpha = 1.0 / L_lip
     
     U = np.zeros_like(g)
@@ -133,20 +132,47 @@ class MPCState:
             H = self.cache["H"]
             N = self.cache["N"]
             
-            x0 = np.array([[current_velocity], [current_current]])
-            Xr = np.tile(np.array([[self.target_vel], [0.0]]), (N, 1))
+            # Convert RPM to rad/s for internal physics model
+            current_velocity_rads = current_velocity * 2 * math.pi / 60.0
+            target_vel_rads = self.target_vel * 2 * math.pi / 60.0
             
-            g = 2 * Su.T @ Q_bar @ (Sx @ x0 - Xr)
+            x0 = np.array([[current_velocity_rads], [current_current]])
+            
+            # Compute required steady-state for target velocity to avoid steady-state error
+            B = MOTOR.get("B", 1e-4)
+            Kt = MOTOR.get("Kt", 0.05)
+            Ke = MOTOR.get("Ke", 0.005)
+            R_m = MOTOR.get("R", 0.5)
+            
+            # Required steady state current (ignoring non-linear friction)
+            i_ss = (B / Kt) * target_vel_rads if Kt != 0 else 0.0
+            
+            # If the user explicitly provided a non-zero target_cur, we use it
+            t_cur = self.target_cur if abs(self.target_cur) > 1e-5 else i_ss
+            
+            # Required steady state voltage
+            u_ss = Ke * target_vel_rads + R_m * t_cur
+            
+            Xr = np.tile(np.array([[target_vel_rads], [t_cur]]), (N, 1))
+            Ur = np.tile(np.array([[u_ss]]), (N, 1))
+            
+            R_bar = np.kron(np.eye(N), np.array([[self.r_ctrl]]))
+            
+            # g includes the Ur term to penalize U - Ur instead of U - 0
+            g = 2 * Su.T @ Q_bar @ (Sx @ x0 - Xr) - 2 * R_bar @ Ur
             
             max_v = MOTOR.get("max_voltage", 24.0)
             lb = -max_v
             ub = max_v
+            L_lip = self.cache["L_lip"]
             
-            U_opt = solve_qp_fgm(H, g, lb, ub, max_iter=20)
+            U_opt = solve_qp_fgm(H, g, lb, ub, L_lip, max_iter=20)
             voltage = U_opt[0, 0]
             
             X_pred = Sx @ x0 + Su @ U_opt
-            pred_vel = X_pred[0::2, 0].tolist()
+            
+            # Convert predicted velocity back to RPM for UI
+            pred_vel = (X_pred[0::2, 0] * 60.0 / (2 * math.pi)).tolist()
             
             return voltage, pred_vel, max_v
 

@@ -19,9 +19,9 @@ active_ws_queues_lock = threading.Lock()
 
 agent_state = {
     "agent_target": 0.0,
-    "agent_wc": 10.0,
-    "agent_b0": 1.0,
-    "agent_ramp": 2.0,
+    "agent_wc": 5.0,
+    "agent_b0": 120.0,
+    "agent_ramp": 0.25,
     "mpc_active": False,
 }
 agent_state_lock = threading.Lock()
@@ -105,6 +105,8 @@ def modbus_polling_worker():
                     voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, actual_current)
                     pwm_val = int((voltage / max_v) * 4000.0)
                     pwm_val = max(min(pwm_val, 4000), -4000)
+                    with agent_state_lock:
+                        agent_state["mpc_pred_vel"] = pred_vel
                     val = struct.unpack("<H", struct.pack("<h", pwm_val))[0]
                     with modbus_lock:
                         modbus_client.write_register(ADDR_PWM_VAL, val, device_id=DEVICE_ID)
@@ -122,6 +124,7 @@ def modbus_polling_worker():
                     "agent_wc": agent_state["agent_wc"],
                     "agent_b0": agent_state["agent_b0"],
                     "agent_ramp": agent_state["agent_ramp"],
+                    "mpc_pred_vel": agent_state.get("mpc_pred_vel", []),
                 }
 
             with active_ws_queues_lock:

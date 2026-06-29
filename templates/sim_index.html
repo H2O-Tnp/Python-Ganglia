@@ -608,24 +608,24 @@
                     <div
                         style="display: grid; grid-template-columns: 100px 80px 1fr; gap: 10px; align-items: center; margin-top: 10px;">
                         <span style="font-weight: bold; font-size: 12px;">Bandwidth (Wc)</span><input type="number"
-                            id="vel_adrc_wc" step="0.1" value="100"
+                            id="vel_adrc_wc" step="0.1" value="5"
                             oninput="syncInput('vel_adrc_wc', 'slider_vel_adrc_wc')"
                             onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_wc" min="0" max="1000" step="0.1" value="100"
+                            id="slider_vel_adrc_wc" min="0" max="100" step="0.1" value="5"
                             oninput="syncInput('slider_vel_adrc_wc', 'vel_adrc_wc')"
                             onchange="setADRC('velocity', 'vel')">
                         <span style="font-weight: bold; font-size: 12px;">Input Gain (b0)</span><input type="number"
-                            id="vel_adrc_b0" step="0.01" value="1.0"
+                            id="vel_adrc_b0" step="0.1" value="120"
                             oninput="syncInput('vel_adrc_b0', 'slider_vel_adrc_b0')"
                             onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_b0" min="0" max="100" step="0.01" value="1.0"
+                            id="slider_vel_adrc_b0" min="0" max="200" step="0.1" value="120"
                             oninput="syncInput('slider_vel_adrc_b0', 'vel_adrc_b0')"
                             onchange="setADRC('velocity', 'vel')">
                         <span style="font-weight: bold; font-size: 12px;">Ramp Time (s)</span><input type="number"
-                            id="vel_adrc_ramp" step="0.1" value="2.0"
+                            id="vel_adrc_ramp" step="0.05" value="0.25"
                             oninput="syncInput('vel_adrc_ramp', 'slider_vel_adrc_ramp')"
                             onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_ramp" min="0" max="10" step="0.1" value="2.0"
+                            id="slider_vel_adrc_ramp" min="0" max="10" step="0.05" value="0.25"
                             oninput="syncInput('slider_vel_adrc_ramp', 'vel_adrc_ramp')"
                             onchange="setADRC('velocity', 'vel')">
                     </div>
@@ -709,6 +709,9 @@
                         <span style="font-weight: bold; font-size: 12px;">Q Velocity</span>
                         <input type="number" id="mpc_q_vel" step="0.1" value="1.0" oninput="syncInput('mpc_q_vel', 'slider_mpc_q_vel')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_q_vel" min="0" max="100" step="0.1" value="1.0" oninput="syncInput('slider_mpc_q_vel', 'mpc_q_vel')" onchange="setMPC()">
 
+                        <span style="font-weight: bold; font-size: 12px;">Q Current</span>
+                        <input type="number" id="mpc_q_cur" step="0.1" value="0.0" oninput="syncInput('mpc_q_cur', 'slider_mpc_q_cur')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_q_cur" min="0" max="10" step="0.1" value="0.0" oninput="syncInput('slider_mpc_q_cur', 'mpc_q_cur')" onchange="setMPC()">
+
                         <span style="font-weight: bold; font-size: 12px;">R Control</span>
                         <input type="number" id="mpc_r_ctrl" step="0.01" value="1.0" oninput="syncInput('mpc_r_ctrl', 'slider_mpc_r_ctrl')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_r_ctrl" min="0" max="1" step="0.01" value="1.0" oninput="syncInput('slider_mpc_r_ctrl', 'mpc_r_ctrl')" onchange="setMPC()">
                     </div>
@@ -724,6 +727,10 @@
                     <div style="display: grid; grid-template-columns: 80px 80px 1fr; gap: 10px; align-items: center; margin-top: 10px;">
                         <span style="font-weight: bold; font-size: 12px;">Vel (RPM)</span>
                         <input type="number" id="mpc_trg_vel" value="0" oninput="syncInput('mpc_trg_vel', 'slider_mpc_trg_vel')" onkeydown="if(event.key==='Enter') setMPCTarget()"><input type="range" id="slider_mpc_trg_vel" min="-4000" max="4000" step="1" value="0" oninput="syncInput('slider_mpc_trg_vel', 'mpc_trg_vel')" onchange="setMPCTarget()">
+                    </div>
+                    <div class="slider-container">
+                        <label for="slider_mpc_trg_cur">Cur (mA)</label>
+                        <input type="number" id="mpc_trg_cur" value="0" oninput="syncInput('mpc_trg_cur', 'slider_mpc_trg_cur')" onkeydown="if(event.key==='Enter') setMPCTarget()"><input type="range" id="slider_mpc_trg_cur" min="-3000" max="3000" step="1" value="0" oninput="syncInput('slider_mpc_trg_cur', 'mpc_trg_cur')" onchange="setMPCTarget()">
                     </div>
                 </div>
                 
@@ -1035,7 +1042,7 @@
         async function setMPC() {
             const q_pos = 0.0;
             const q_vel = parseFloat(document.getElementById('mpc_q_vel').value) || 0;
-            const q_cur = 0.0;
+            const q_cur = parseFloat(document.getElementById('mpc_q_cur').value) || 0.0;
             const r_ctrl = parseFloat(document.getElementById('mpc_r_ctrl').value) || 0;
             const horizon = parseInt(document.getElementById('mpc_horizon').value) || 10;
             const payload = { q_pos: q_pos, q_vel: q_vel, q_cur: q_cur, r_ctrl: r_ctrl, horizon: horizon };
@@ -1045,7 +1052,7 @@
         async function setMPCTarget() {
             const target_pos = 0.0;
             const target_vel = parseFloat(document.getElementById('mpc_trg_vel').value) || 0;
-            const target_cur = 0.0;
+            const target_cur = parseFloat(document.getElementById('mpc_trg_cur').value) || 0.0;
             const payload = { target_pos: target_pos, target_vel: target_vel, target_cur: target_cur };
             await fetch('/set_mpc_target', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         }
@@ -1309,15 +1316,18 @@
 
                         // Push to incoming buffer for rendering
                         incomingBuffer.push(pt);
-                        
-                        // Handle MPC Predictions immediately to show smooth animation
-                        if (pt.mpc_pred_vel && pt.mpc_pred_vel.length > 0 && document.getElementById('tab-mpc').classList.contains('active')) {
-                            mpcPredChart.data.labels = pt.mpc_pred_vel.map((_, idx) => "t+" + idx);
-                            mpcPredChart.data.datasets[0].data = pt.mpc_pred_vel;
-                            mpcPredChart.update('none');
-                        }
                     }
                 }
+                
+                // Process MPC Predictions only once per websocket batch to prevent massive lag
+                if (pts.length > 0) {
+                    const lastPt = pts[pts.length - 1];
+                    if (lastPt.mpc_pred_vel && lastPt.mpc_pred_vel.length > 0 && document.getElementById('tab-mpc').classList.contains('active')) {
+                        mpcPredChart.data.labels = lastPt.mpc_pred_vel.map((_, idx) => "t+" + idx);
+                        mpcPredChart.data.datasets[0].data = lastPt.mpc_pred_vel;
+                    }
+                }
+                
                 chartDirty = true;
             };
         }
@@ -1376,10 +1386,21 @@
                     }
                 }
 
-                velChart.update('none'); accChart.update('none'); curChart.update('none');
-                z1Chart.update('none'); z2Chart.update('none'); z3Chart.update('none');
-                agentTargetChart.update('none');
-                agentWcChart.update('none'); agentB0Chart.update('none'); agentRampChart.update('none');
+                if (!window.lastRenderTime) window.lastRenderTime = 0;
+                let now = performance.now();
+                if (now - window.lastRenderTime > 16) { // Limit updates to ~60 FPS
+                    window.lastRenderTime = now;
+                    velChart.update('none'); accChart.update('none'); curChart.update('none');
+                    z1Chart.update('none'); z2Chart.update('none'); z3Chart.update('none');
+                    
+                    if (document.getElementById('tab-agent').classList.contains('active')) {
+                        agentTargetChart.update('none');
+                        agentWcChart.update('none'); agentB0Chart.update('none'); agentRampChart.update('none');
+                    }
+                    if (document.getElementById('tab-mpc').classList.contains('active')) {
+                        mpcPredChart.update('none');
+                    }
+                }
             }
             requestAnimationFrame(renderLoop);
         }
