@@ -97,16 +97,23 @@ def modbus_polling_worker():
                 mpc_active = agent_state.get("mpc_active", False)
                 
             if mpc_active:
+                actual_target_vel = global_mpc.target_vel
+                
+            current_mpc_pred_vel = []
+            current_mpc_voltage = 0.0
+            if mpc_active:
                 if not hasattr(modbus_polling_worker, "last_mpc_time"):
                     modbus_polling_worker.last_mpc_time = 0
                 current_time = time.time()
                 if current_time - modbus_polling_worker.last_mpc_time >= 0.01:
                     modbus_polling_worker.last_mpc_time = current_time
-                    voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, actual_current)
+                    # actual_current is in mA. The hardware sensor reads negative for positive torque, 
+                    # so we invert it to match the standard MPC physical model which expects positive current.
+                    voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, -actual_current / 1000.0)
                     pwm_val = int((voltage / max_v) * 4000.0)
-                    pwm_val = max(min(pwm_val, 4000), -4000)
-                    with agent_state_lock:
-                        agent_state["mpc_pred_vel"] = pred_vel
+                    pwm_val = max(min(pwm_val, 4000), 0)
+                    current_mpc_pred_vel = pred_vel
+                    current_mpc_voltage = voltage
                     val = struct.unpack("<H", struct.pack("<h", pwm_val))[0]
                     with modbus_lock:
                         modbus_client.write_register(ADDR_PWM_VAL, val, device_id=DEVICE_ID)
@@ -124,7 +131,8 @@ def modbus_polling_worker():
                     "agent_wc": agent_state["agent_wc"],
                     "agent_b0": agent_state["agent_b0"],
                     "agent_ramp": agent_state["agent_ramp"],
-                    "mpc_pred_vel": agent_state.get("mpc_pred_vel", []),
+                    "mpc_pred_vel": current_mpc_pred_vel,
+                    "mpc_voltage": current_mpc_voltage,
                 }
 
             with active_ws_queues_lock:

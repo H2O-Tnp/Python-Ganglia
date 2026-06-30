@@ -447,8 +447,8 @@
         .mb-2-5 { margin-bottom: 10px; }
         .mb-4 { margin-bottom: 15px; }
         .mt-5 { margin-top: 20px; }
-        .grid-pid { display: grid; grid-template-columns: 20px 80px 1fr; gap: 10px; align-items: center; margin-bottom: 10px; }
-        .grid-adrc { display: grid; grid-template-columns: 100px 80px 1fr; gap: 10px; align-items: center; margin-top: 10px; }
+        .grid-pid { display: grid; grid-template-columns: 20px 80px; gap: 10px; align-items: center; margin-bottom: 10px; }
+        .grid-adrc { display: grid; grid-template-columns: 100px 80px; gap: 10px; align-items: center; margin-top: 10px; }
         .border-rose { border-color: rgba(225, 29, 72, 0.2); }
         .border-sky { border-color: rgba(2, 132, 199, 0.2); }
         .bg-emerald-light { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); }

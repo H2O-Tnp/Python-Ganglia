@@ -125,18 +125,9 @@ def set_adrc(req: ADRCRequest):
 @router.post("/set_mpc")
 def set_mpc(req: MPCRequest):
     global_mpc.update_params(req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
-    # We still send to mock sim if it's connected, but on real hardware this address might not exist.
-    # To avoid errors on real hardware if address 400 doesn't exist, we can just try-except or ignore.
-    modbus_client, device_id, modbus_lock = get_modbus()
-    with modbus_lock:
-        if modbus_client and modbus_client.connected:
-            packed_bytes = struct.pack("<ffffi", req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
-            registers = struct.unpack("<10H", packed_bytes)
-            # This write is mainly for the mock simulator to stay in sync
-            try:
-                modbus_client.write_registers(address=400, values=list(registers), device_id=device_id)
-            except Exception:
-                pass
+    # Note: We intentionally do NOT send this to the real hardware over Modbus.
+    # The MPC logic runs entirely in Python. Writing to unmapped registers (e.g. 400) 
+    # causes a buffer overflow and HardFault on the real hardware.
     return {"status": "success"}
 
 @router.post("/set_rpm_cap")
@@ -150,15 +141,9 @@ def set_mpc_target(req: MPCTargetRequest):
     cap = agent_state.get("rpm_cap", 4000.0)
     target_vel = max(-cap, min(cap, req.target_vel))
     global_mpc.update_target(req.target_pos, target_vel, req.target_cur)
-    modbus_client, device_id, modbus_lock = get_modbus()
-    with modbus_lock:
-        if modbus_client and modbus_client.connected:
-            packed_bytes = struct.pack("<fff", req.target_pos, req.target_vel, req.target_cur)
-            registers = struct.unpack("<6H", packed_bytes)
-            try:
-                modbus_client.write_registers(address=410, values=list(registers), device_id=device_id)
-            except Exception:
-                pass
+    # Note: We intentionally do NOT send this to the real hardware over Modbus.
+    # The MPC logic runs entirely in Python. Writing to unmapped registers (e.g. 410) 
+    # causes a buffer overflow and HardFault on the real hardware.
     return {"status": "success"}
 
 @router.post("/set_target")

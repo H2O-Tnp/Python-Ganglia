@@ -4,7 +4,7 @@
 <head>
     <title>Motor Control</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2">
 </head>
 
 <body>
@@ -64,20 +64,11 @@
                 </select><br><br>
                 <div class="grid-pid">
                     <span id="posL1" class="font-bold">P</span><input type="number" id="pos1" step="0.01"
-                        value="0.5" oninput="syncInput('pos1', 'slider_pos1')"
-                        onkeydown="if(event.key==='Enter') setPID('position', 'pos')"><input type="range"
-                        id="slider_pos1" min="0" max="10" step="0.01" value="0.5"
-                        oninput="syncInput('slider_pos1', 'pos1')" onchange="setPID('position', 'pos')">
+                        value="0.5" onkeydown="if(event.key==='Enter') setPID('position', 'pos')">
                     <span id="posL2" class="font-bold">I</span><input type="number" id="pos2" step="0.01"
-                        value="0.0" oninput="syncInput('pos2', 'slider_pos2')"
-                        onkeydown="if(event.key==='Enter') setPID('position', 'pos')"><input type="range"
-                        id="slider_pos2" min="0" max="10" step="0.01" value="0.0"
-                        oninput="syncInput('slider_pos2', 'pos2')" onchange="setPID('position', 'pos')">
+                        value="0.0" onkeydown="if(event.key==='Enter') setPID('position', 'pos')">
                     <span id="posL3" class="font-bold">D</span><input type="number" id="pos3" step="0.01"
-                        value="0.1" oninput="syncInput('pos3', 'slider_pos3')"
-                        onkeydown="if(event.key==='Enter') setPID('position', 'pos')"><input type="range"
-                        id="slider_pos3" min="0" max="10" step="0.01" value="0.1"
-                        oninput="syncInput('slider_pos3', 'pos3')" onchange="setPID('position', 'pos')">
+                        value="0.1" onkeydown="if(event.key==='Enter') setPID('position', 'pos')">
                 </div>
                 <div class="mb-4 text-sm">
                     <strong>Integral Limit (Counts):</strong>
@@ -87,11 +78,8 @@
 
                 <div class="input-group">
                     <strong>Target:</strong> <input type="number" id="numPos" value="0"
-                        oninput="syncInput('numPos', 'valPos')"
-                        onkeydown="if(event.key==='Enter') setTarget('position', 'valPos', -500000, 500000)"> counts<br>
-                    <input type="range" id="valPos" min="-50000" max="50000" step="1" value="0"
-                        oninput="syncInput('valPos', 'numPos')"
-                        onchange="setTarget('position', 'valPos', -500000, 500000)">
+                        onkeydown="if(event.key==='Enter') setTarget('position', 'numPos', -500000, 500000)"> counts<br>
+                    
                 </div>
             </div>
 
@@ -106,20 +94,11 @@
                 </select><br><br>
                 <div class="grid-pid">
                     <span id="velL1" class="font-bold">P</span><input type="number" id="vel1" step="0.01"
-                        value="0.1" oninput="syncInput('vel1', 'slider_vel1')"
-                        onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')"><input type="range"
-                        id="slider_vel1" min="0" max="10" step="0.01" value="0.1"
-                        oninput="syncInput('slider_vel1', 'vel1')" onchange="setPID('velocity', 'vel')">
+                        value="0.1" onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')">
                     <span id="velL2" class="font-bold">I</span><input type="number" id="vel2" step="0.01"
-                        value="0.01" oninput="syncInput('vel2', 'slider_vel2')"
-                        onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')"><input type="range"
-                        id="slider_vel2" min="0" max="10" step="0.01" value="0.01"
-                        oninput="syncInput('slider_vel2', 'vel2')" onchange="setPID('velocity', 'vel')">
+                        value="0.01" onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')">
                     <span id="velL3" class="font-bold">D</span><input type="number" id="vel3" step="0.01"
-                        value="0" oninput="syncInput('vel3', 'slider_vel3')"
-                        onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')"><input type="range"
-                        id="slider_vel3" min="0" max="10" step="0.01" value="0"
-                        oninput="syncInput('slider_vel3', 'vel3')" onchange="setPID('velocity', 'vel')">
+                        value="0" onkeydown="if(event.key==='Enter') setPID('velocity', 'vel')">
                 </div>
                 <!-- AI -->
                 <div class="glass-panel border-rose">
@@ -129,14 +108,12 @@
                         <div class="flex-gap5-center">
                             <input type="number" id="blendDisplay" min="0" max="100" step="1" value="0"
                                 class="w-15 p-1 text-center text-rose border-rose font-bold"
-                                oninput="syncInput('blendDisplay', 'sliderBlend')" onchange="sendBlendData()" onkeydown="if(event.key==='Enter') sendBlendData()">
+                                onchange="sendBlendData()" onkeydown="if(event.key==='Enter') sendBlendData()">
                             <span class="text-rose">%</span>
                         </div>
                         <span>New Control (100%)</span>
                     </div>
-                    <input type="range" id="sliderBlend" min="0" max="100" step="1" value="0"
-                        class="w-full" style="accent-color: #e11d48;" oninput="syncInput('sliderBlend', 'blendDisplay')"
-                        onchange="sendBlendData()">
+                    
                 </div>
                 <div class="mb-4 text-sm">
                     <strong>Integral Limit (PWM):</strong>
@@ -149,33 +126,19 @@
                     <div class="grid-adrc">
                         <span class="font-bold text-xs">Bandwidth (Wc)</span><input type="number"
                             id="vel_adrc_wc" step="0.1" value="5"
-                            oninput="syncInput('vel_adrc_wc', 'slider_vel_adrc_wc')"
-                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_wc" min="0" max="100" step="0.1" value="5"
-                            oninput="syncInput('slider_vel_adrc_wc', 'vel_adrc_wc')"
-                            onchange="setADRC('velocity', 'vel')">
+                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')">
                         <span class="font-bold text-xs">Input Gain (b0)</span><input type="number"
                             id="vel_adrc_b0" step="0.1" value="120"
-                            oninput="syncInput('vel_adrc_b0', 'slider_vel_adrc_b0')"
-                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_b0" min="0" max="200" step="0.1" value="120"
-                            oninput="syncInput('slider_vel_adrc_b0', 'vel_adrc_b0')"
-                            onchange="setADRC('velocity', 'vel')">
+                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')">
                         <span class="font-bold text-xs">Ramp Time (s)</span><input type="number"
                             id="vel_adrc_ramp" step="0.05" value="0.25"
-                            oninput="syncInput('vel_adrc_ramp', 'slider_vel_adrc_ramp')"
-                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')"><input type="range"
-                            id="slider_vel_adrc_ramp" min="0" max="10" step="0.05" value="0.25"
-                            oninput="syncInput('slider_vel_adrc_ramp', 'vel_adrc_ramp')"
-                            onchange="setADRC('velocity', 'vel')">
+                            onkeydown="if(event.key==='Enter') setADRC('velocity', 'vel')">
                     </div>
                 </div>
                 <div class="input-group">
                     <strong>Target:</strong> <input type="number" id="numVel" value="0"
-                        oninput="syncInput('numVel', 'valVel')"
-                        onkeydown="if(event.key==='Enter') setTarget('velocity', 'valVel', -4000, 4000)"> RPM<br>
-                    <input type="range" id="valVel" min="-4000" max="4000" step="1" value="0"
-                        oninput="syncInput('valVel', 'numVel')" onchange="setTarget('velocity', 'valVel', -4000, 4000)">
+                        onkeydown="if(event.key==='Enter') setTarget('velocity', 'numVel', -4000, 4000)"> RPM<br>
+                    
                 </div>
             </div>
 
@@ -202,20 +165,11 @@
                 </select><br><br>
                 <div class="grid-pid">
                     <span id="curL1" class="font-bold">P</span><input type="number" id="cur1" step="0.01"
-                        value="1.0" oninput="syncInput('cur1', 'slider_cur1')"
-                        onkeydown="if(event.key==='Enter') setPID('current', 'cur')"><input type="range"
-                        id="slider_cur1" min="0" max="10" step="0.01" value="1.0"
-                        oninput="syncInput('slider_cur1', 'cur1')" onchange="setPID('current', 'cur')">
+                        value="1.0" onkeydown="if(event.key==='Enter') setPID('current', 'cur')">
                     <span id="curL2" class="font-bold">I</span><input type="number" id="cur2" step="0.01"
-                        value="0.1" oninput="syncInput('cur2', 'slider_cur2')"
-                        onkeydown="if(event.key==='Enter') setPID('current', 'cur')"><input type="range"
-                        id="slider_cur2" min="0" max="10" step="0.01" value="0.1"
-                        oninput="syncInput('slider_cur2', 'cur2')" onchange="setPID('current', 'cur')">
+                        value="0.1" onkeydown="if(event.key==='Enter') setPID('current', 'cur')">
                     <span id="curL3" class="font-bold">D</span><input type="number" id="cur3" step="0.01"
-                        value="0" oninput="syncInput('cur3', 'slider_cur3')"
-                        onkeydown="if(event.key==='Enter') setPID('current', 'cur')"><input type="range"
-                        id="slider_cur3" min="0" max="10" step="0.01" value="0"
-                        oninput="syncInput('slider_cur3', 'cur3')" onchange="setPID('current', 'cur')">
+                        value="0" onkeydown="if(event.key==='Enter') setPID('current', 'cur')">
                 </div>
                 <div class="mb-4 text-sm">
                     <strong>Integral Limit (PWM):</strong>
@@ -225,19 +179,15 @@
 
                 <div class="input-group">
                     <strong>Target:</strong> <input type="number" id="numCur" value="0"
-                        oninput="syncInput('numCur', 'valCur')"
-                        onkeydown="if(event.key==='Enter') setTarget('current', 'valCur', -2000, 2000)"> mA<br>
-                    <input type="range" id="valCur" min="-2000" max="2000" step="1" value="0"
-                        oninput="syncInput('valCur', 'numCur')" onchange="setTarget('current', 'valCur', -2000, 2000)">
+                        onkeydown="if(event.key==='Enter') setTarget('current', 'numCur', -2000, 2000)"> mA<br>
+                    
                 </div>
             </div>
 
             <div id="tab-pwm" class="tab-content">
                 <h3>PWM Open-Loop</h3>
                 <div class="input-group">Target (Scaled RPM / Duty): <input type="number" id="numPwm" value="0"
-                        oninput="syncInput('numPwm', 'valPwm')" onkeydown="if(event.key==='Enter') setPWM()"><br><input
-                        type="range" id="valPwm" min="-4000" max="4000" step="1" value="0"
-                        oninput="syncInput('valPwm', 'numPwm')" onchange="setPWM()"></div>
+                        onkeydown="if(event.key==='Enter') setPWM()"><br></div>
             </div>
 
             <div id="tab-mpc" class="tab-content">
@@ -246,13 +196,13 @@
                     <strong class="text-sky">MPC Weights (Q & R)</strong><br>
                     <div class="grid-adrc">
                         <span class="font-bold text-xs">Q Velocity</span>
-                        <input type="number" id="mpc_q_vel" step="0.1" value="1.0" oninput="syncInput('mpc_q_vel', 'slider_mpc_q_vel')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_q_vel" min="0" max="100" step="0.1" value="1.0" oninput="syncInput('slider_mpc_q_vel', 'mpc_q_vel')" onchange="setMPC()">
+                        <input type="number" id="mpc_q_vel" step="0.1" value="1.0" onkeydown="if(event.key==='Enter') setMPC()">
 
                         <span class="font-bold text-xs">Q Current</span>
-                        <input type="number" id="mpc_q_cur" step="0.1" value="0.0" oninput="syncInput('mpc_q_cur', 'slider_mpc_q_cur')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_q_cur" min="0" max="10" step="0.1" value="0.0" oninput="syncInput('slider_mpc_q_cur', 'mpc_q_cur')" onchange="setMPC()">
+                        <input type="number" id="mpc_q_cur" step="0.1" value="0.0" onkeydown="if(event.key==='Enter') setMPC()">
 
                         <span class="font-bold text-xs">R Control</span>
-                        <input type="number" id="mpc_r_ctrl" step="0.01" value="1.0" oninput="syncInput('mpc_r_ctrl', 'slider_mpc_r_ctrl')" onkeydown="if(event.key==='Enter') setMPC()"><input type="range" id="slider_mpc_r_ctrl" min="0" max="1" step="0.01" value="1.0" oninput="syncInput('slider_mpc_r_ctrl', 'mpc_r_ctrl')" onchange="setMPC()">
+                        <input type="number" id="mpc_r_ctrl" step="0.01" value="1.0" onkeydown="if(event.key==='Enter') setMPC()">
                     </div>
                 </div>
                 
@@ -265,16 +215,8 @@
                     <strong class="text-emerald">Targets</strong><br>
                     <div class="grid-adrc">
                         <span class="font-bold text-xs">Vel (RPM)</span>
-                        <input type="number" id="mpc_trg_vel" value="0" oninput="syncInput('mpc_trg_vel', 'slider_mpc_trg_vel')" onkeydown="if(event.key==='Enter') setMPCTarget()"><input type="range" id="slider_mpc_trg_vel" min="-4000" max="4000" step="1" value="0" oninput="syncInput('slider_mpc_trg_vel', 'mpc_trg_vel')" onchange="setMPCTarget()">
+                        <input type="number" id="mpc_trg_vel" value="0" onkeydown="if(event.key==='Enter') setMPCTarget()">
                     </div>
-                    <div class="slider-container">
-                        <label for="slider_mpc_trg_cur">Cur (mA)</label>
-                        <input type="number" id="mpc_trg_cur" value="0" oninput="syncInput('mpc_trg_cur', 'slider_mpc_trg_cur')" onkeydown="if(event.key==='Enter') setMPCTarget()"><input type="range" id="slider_mpc_trg_cur" min="-3000" max="3000" step="1" value="0" oninput="syncInput('slider_mpc_trg_cur', 'mpc_trg_cur')" onchange="setMPCTarget()">
-                    </div>
-                </div>
-                
-                <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px; overflow-x: hidden;">
-                    <div class="chart-wrapper" style="height: 250px; min-height: 250px;"><canvas id="mpcPredChart"></canvas></div>
                 </div>
             </div>
 
@@ -369,6 +311,11 @@
                         <div class="chart-wrapper"><canvas id="z2Chart"></canvas></div>
                         <div class="chart-wrapper"><canvas id="z3Chart"></canvas></div>
                     </div>
+                    <div id="mpcChartsRight" class="chart-container" style="display: none; margin-top: 0; grid-template-columns: 1fr;">
+                        <div class="chart-wrapper" style="height: 250px; min-height: 250px;"><canvas id="mpcPredChart"></canvas></div>
+                        <div class="chart-wrapper" style="height: 250px; min-height: 250px;"><canvas id="mpcErrorChart"></canvas></div>
+                        <div class="chart-wrapper" style="height: 250px; min-height: 250px;"><canvas id="mpcVoltageChart"></canvas></div>
+                    </div>
                 </div>
             </div>
 
@@ -443,6 +390,8 @@
             agentWcChart.data.labels = []; agentWcChart.data.datasets[0].data = [];
             agentB0Chart.data.labels = []; agentB0Chart.data.datasets[0].data = [];
             agentRampChart.data.labels = []; agentRampChart.data.datasets[0].data = [];
+            mpcVoltageChart.data.labels = []; mpcVoltageChart.data.datasets[0].data = [];
+            mpcErrorChart.data.labels = []; mpcErrorChart.data.datasets[0].data = [];
 
             if (exportDataBuffer && exportDataBuffer.length > 0) {
                 const latestTime = exportDataBuffer[exportDataBuffer.length - 1].time;
@@ -470,11 +419,15 @@
                     agentWcChart.data.labels.push(label); agentWcChart.data.datasets[0].data.push(pt.agent_wc || 0);
                     agentB0Chart.data.labels.push(label); agentB0Chart.data.datasets[0].data.push(pt.agent_b0 || 0);
                     agentRampChart.data.labels.push(label); agentRampChart.data.datasets[0].data.push(pt.agent_ramp || 0);
+                    mpcVoltageChart.data.labels.push(label); mpcVoltageChart.data.datasets[0].data.push(pt.mpc_voltage || 0);
+                    mpcErrorChart.data.labels.push(label); mpcErrorChart.data.datasets[0].data.push((pt.target_velocity || 0) - (pt.velocity || 0));
                 }
             }
 
             velChart.update('none'); accChart.update('none'); curChart.update('none');
             z1Chart.update('none'); z2Chart.update('none'); z3Chart.update('none');
+            mpcVoltageChart.update('none');
+            mpcErrorChart.update('none');
         }
 
         // Exact conversions from original C++ controlwidget.cpp
@@ -501,6 +454,22 @@
             const agentResizer = document.getElementById('agentResizer');
             if (agentLogContainer) agentLogContainer.style.display = (tabPrefix === 'agent') ? 'flex' : 'none';
             if (agentResizer) agentResizer.style.display = (tabPrefix === 'agent') ? 'block' : 'none';
+            
+            const timeSeriesRight = document.getElementById('timeSeriesChartsRight');
+            const mpcChartsRight = document.getElementById('mpcChartsRight');
+            if (timeSeriesRight && mpcChartsRight) {
+                if (tabPrefix === 'mpc') {
+                    timeSeriesRight.style.display = 'none';
+                    mpcChartsRight.style.display = 'flex';
+                    mpcChartsRight.style.flexDirection = 'column';
+                    mpcChartsRight.style.gap = '10px';
+                    mpcChartsRight.style.height = '100%';
+                } else {
+                    timeSeriesRight.style.display = 'grid';
+                    mpcChartsRight.style.display = 'none';
+                }
+            }
+
             await fetch('/set_op_mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: opModeInt }) });
         }
 
@@ -582,7 +551,7 @@
         async function setMPCTarget() {
             const target_pos = 0.0;
             const target_vel = parseFloat(document.getElementById('mpc_trg_vel').value) || 0;
-            const target_cur = parseFloat(document.getElementById('mpc_trg_cur').value) || 0.0;
+            const target_cur = 0.0; // Automatically calculated by MPC
             const payload = { target_pos: target_pos, target_vel: target_vel, target_cur: target_cur };
             await fetch('/set_mpc_target', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         }
@@ -592,10 +561,10 @@
                 alert("No data to export!");
                 return;
             }
-            let csvContent = "data:text/csv;charset=utf-8,UnixEpoch,Time(s),Velocity(RPM),Acceleration(RPM/s),Current(mA),z1,z2,z3,FadingValue(%),ADRC_Wc,ADRC_b0,ADRC_Ramp\n";
+            let csvContent = "data:text/csv;charset=utf-8,UnixEpoch,Time(s),Velocity(RPM),Acceleration(RPM/s),Current(mA),z1,z2,z3,FadingValue(%),ADRC_Wc,ADRC_b0,ADRC_Ramp,MPC_Voltage\n";
             for (let i = 0; i < exportDataBuffer.length; i++) {
                 const pt = exportDataBuffer[i];
-                csvContent += `${pt.unix_time || ''},${pt.time},${pt.velocity},${pt.acceleration},${pt.current},${pt.z1},${pt.z2},${pt.z3},${pt.fading || 0},${pt.adrc_wc || 0},${pt.adrc_b0 || 0},${pt.adrc_ramp || 0}\n`;
+                csvContent += `${pt.unix_time || ''},${pt.time},${pt.velocity},${pt.acceleration},${pt.current},${pt.z1},${pt.z2},${pt.z3},${pt.fading || 0},${pt.adrc_wc || 0},${pt.adrc_b0 || 0},${pt.adrc_ramp || 0},${pt.mpc_voltage || 0}\n`;
             }
 
             const encodedUri = encodeURI(csvContent);
@@ -689,6 +658,8 @@
         const agentB0Chart = createChart('agentB0Chart', 'System Gain b0', '#10b981');
         const agentRampChart = createChart('agentRampChart', 'Ramp Time (s)', '#8b5cf6');
         const mpcPredChart = createChart('mpcPredChart', 'MPC Predicted Velocity (RPM)', '#4f46e5');
+        const mpcErrorChart = createChart('mpcErrorChart', 'Tracking Error (RPM)', '#f59e0b');
+        const mpcVoltageChart = createChart('mpcVoltageChart', 'MPC Computed Voltage (V)', '#f43f5e', -24, 24);
 
         async function refreshPorts() {
             try {
@@ -801,7 +772,7 @@
 
                         // Sync UI inputs to agent values if user is not actively interacting
                         const numVel = document.getElementById('numVel');
-                        const valVel = document.getElementById('valVel');
+                        const valVel = document.getElementById('numVel');
                         if (numVel && valVel && document.activeElement !== numVel && document.activeElement !== valVel) {
                             numVel.value = pt.agent_target;
                             valVel.value = pt.agent_target;
@@ -851,10 +822,16 @@
                 
                 // Process MPC Predictions only once per websocket batch to prevent massive lag
                 if (pts.length > 0) {
-                    const lastPt = pts[pts.length - 1];
-                    if (lastPt.mpc_pred_vel && lastPt.mpc_pred_vel.length > 0 && document.getElementById('tab-mpc').classList.contains('active')) {
-                        mpcPredChart.data.labels = lastPt.mpc_pred_vel.map((_, idx) => "t+" + idx);
-                        mpcPredChart.data.datasets[0].data = lastPt.mpc_pred_vel;
+                    let lastValidMPC = null;
+                    for (let i = pts.length - 1; i >= 0; i--) {
+                        if (pts[i].mpc_pred_vel && pts[i].mpc_pred_vel.length > 0) {
+                            lastValidMPC = pts[i].mpc_pred_vel;
+                            break;
+                        }
+                    }
+                    if (lastValidMPC && document.getElementById('tab-mpc').classList.contains('active')) {
+                        mpcPredChart.data.labels = lastValidMPC.map((_, idx) => "t+" + idx);
+                        mpcPredChart.data.datasets[0].data = lastValidMPC;
                     }
                 }
                 
@@ -885,6 +862,8 @@
                     agentWcChart.data.labels.push(label); agentWcChart.data.datasets[0].data.push(pt.agent_wc || 0);
                     agentB0Chart.data.labels.push(label); agentB0Chart.data.datasets[0].data.push(pt.agent_b0 || 0);
                     agentRampChart.data.labels.push(label); agentRampChart.data.datasets[0].data.push(pt.agent_ramp || 0);
+                    mpcVoltageChart.data.labels.push(label); mpcVoltageChart.data.datasets[0].data.push(pt.mpc_voltage || 0);
+                    mpcErrorChart.data.labels.push(label); mpcErrorChart.data.datasets[0].data.push((pt.target_velocity || 0) - (pt.velocity || 0));
                 }
 
                 // Batch remove excess points based on real time
@@ -913,6 +892,8 @@
                         agentWcChart.data.labels.splice(0, excess); agentWcChart.data.datasets[0].data.splice(0, excess);
                         agentB0Chart.data.labels.splice(0, excess); agentB0Chart.data.datasets[0].data.splice(0, excess);
                         agentRampChart.data.labels.splice(0, excess); agentRampChart.data.datasets[0].data.splice(0, excess);
+                        mpcVoltageChart.data.labels.splice(0, excess); mpcVoltageChart.data.datasets[0].data.splice(0, excess);
+                        mpcErrorChart.data.labels.splice(0, excess); mpcErrorChart.data.datasets[0].data.splice(0, excess);
                     }
                 }
 
@@ -929,6 +910,8 @@
                     }
                     if (document.getElementById('tab-mpc').classList.contains('active')) {
                         mpcPredChart.update('none');
+                        mpcVoltageChart.update('none');
+                        mpcErrorChart.update('none');
                     }
                 }
             }

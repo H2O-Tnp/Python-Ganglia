@@ -97,6 +97,7 @@ class MPCState:
         self.target_vel = 0.0
         self.target_cur = 0.0
         
+        self.integral_error = 0.0
         self.cache = None
         self.rebuild_needed = True
 
@@ -132,9 +133,18 @@ class MPCState:
             H = self.cache["H"]
             N = self.cache["N"]
             
+            # Soft start ramp to prevent inrush current brownouts from step inputs
+            max_step_rpm = 200.0 * self.dt  # 200 RPM/s acceleration limit
+            if self.target_vel > getattr(self, 'current_target_vel', 0.0) + max_step_rpm:
+                self.current_target_vel = getattr(self, 'current_target_vel', 0.0) + max_step_rpm
+            elif self.target_vel < getattr(self, 'current_target_vel', 0.0) - max_step_rpm:
+                self.current_target_vel = getattr(self, 'current_target_vel', 0.0) - max_step_rpm
+            else:
+                self.current_target_vel = self.target_vel
+                
             # Convert RPM to rad/s for internal physics model
             current_velocity_rads = current_velocity * 2 * math.pi / 60.0
-            target_vel_rads = self.target_vel * 2 * math.pi / 60.0
+            target_vel_rads = self.current_target_vel * 2 * math.pi / 60.0
             
             x0 = np.array([[current_velocity_rads], [current_current]])
             
@@ -144,14 +154,24 @@ class MPCState:
             Ke = MOTOR.get("Ke", 0.005)
             R_m = MOTOR.get("R", 0.5)
             
+            # Integral action to eliminate steady state error
+            velocity_error = target_vel_rads - current_velocity_rads
+            
+            # Only integrate if we are somewhat close to the target, or reduce windup cap significantly
+            self.integral_error += velocity_error * self.dt
+            # Clamp to a much smaller value (e.g., +/- 10.0 provides +/- 5V of max correction)
+            self.integral_error = max(min(self.integral_error, 10.0), -10.0) 
+            
             # Required steady state current (ignoring non-linear friction)
             i_ss = (B / Kt) * target_vel_rads if Kt != 0 else 0.0
             
-            # If the user explicitly provided a non-zero target_cur, we use it
-            t_cur = self.target_cur if abs(self.target_cur) > 1e-5 else i_ss
+            # If the user explicitly provided a non-zero target_cur (which is in mA), convert to A and use it
+            user_t_cur_A = self.target_cur / 1000.0
+            t_cur = user_t_cur_A if abs(user_t_cur_A) > 1e-5 else i_ss
             
-            # Required steady state voltage
-            u_ss = Ke * target_vel_rads + R_m * t_cur
+            # Required steady state voltage + integral correction
+            ki_voltage = 0.1
+            u_ss = Ke * target_vel_rads + R_m * t_cur + ki_voltage * self.integral_error
             
             Xr = np.tile(np.array([[target_vel_rads], [t_cur]]), (N, 1))
             Ur = np.tile(np.array([[u_ss]]), (N, 1))

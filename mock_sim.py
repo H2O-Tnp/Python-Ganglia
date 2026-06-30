@@ -204,6 +204,7 @@ def physics_loop():
                 elif mode == 3: # MPC
                     # We are using global_mpc from mpc_controller
                     voltage, pred_vel, max_v = global_mpc.compute_step(sim_state["velocity"], sim_state.get("current_A", 0.0))
+                    current_mpc_voltage = voltage
                     sim_state["last_voltage"] = voltage
                     sim_state["mpc_pred_vel"] = pred_vel
             
