@@ -113,6 +113,7 @@ state_lock = threading.Lock()
 # MPC Helper Functions (Moved to mpc_controller.py)
 # ---------------------------------------------------------
 from mpc_controller import global_mpc
+from lqr_controller import global_lqr
 
 # ---------------------------------------------------------
 # Simulation Physics Thread
@@ -205,6 +206,11 @@ def physics_loop():
                     # We are using global_mpc from mpc_controller
                     voltage, pred_vel, max_v = global_mpc.compute_step(sim_state["velocity"], sim_state.get("current_A", 0.0))
                     current_mpc_voltage = voltage
+                    sim_state["last_voltage"] = voltage
+                    sim_state["mpc_pred_vel"] = pred_vel
+                elif mode == 4: # LQR
+                    voltage, pred_vel, max_v = global_lqr.compute_step(sim_state["velocity"], sim_state.get("current_A", 0.0))
+                    current_lqr_voltage = voltage
                     sim_state["last_voltage"] = voltage
                     sim_state["mpc_pred_vel"] = pred_vel
             

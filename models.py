@@ -31,6 +31,15 @@ class MPCTargetRequest(BaseModel):
     target_vel: float
     target_cur: float
 
+class LQRRequest(BaseModel):
+    q_vel: float
+    q_cur: float
+    r_ctrl: float
+
+class LQRTargetRequest(BaseModel):
+    target_vel: float
+    target_cur: float
+
 class TargetRequest(BaseModel):
     mode: str
     value: float

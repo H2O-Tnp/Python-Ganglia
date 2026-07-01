@@ -6,6 +6,7 @@ from pymodbus.client import ModbusSerialClient
 from pymodbus import FramerType
 from config import *
 from mpc_controller import global_mpc
+from lqr_controller import global_lqr
 
 # ---------------------------------------------------------
 # Global Modbus State
@@ -23,6 +24,7 @@ agent_state = {
     "agent_b0": 120.0,
     "agent_ramp": 0.25,
     "mpc_active": False,
+    "lqr_active": False,
 }
 agent_state_lock = threading.Lock()
 
@@ -91,27 +93,42 @@ def modbus_polling_worker():
             ADC_TO_MA = 4.698555425 
             actual_current = raw_current * ADC_TO_MA
 
-            # --- MPC Logic ---
+            # Apply Exponential Moving Average (EMA) filter to smooth out current spikes and noise
+            if not hasattr(modbus_polling_worker, "filtered_current"):
+                modbus_polling_worker.filtered_current = actual_current
+            alpha = 0.05  # Lower = smoother but more lag. 0.05 is good for 1ms polling
+            modbus_polling_worker.filtered_current = (1.0 - alpha) * modbus_polling_worker.filtered_current + alpha * actual_current
+
+            # --- MPC & LQR Logic ---
             mpc_active = False
+            lqr_active = False
             with agent_state_lock:
                 mpc_active = agent_state.get("mpc_active", False)
+                lqr_active = agent_state.get("lqr_active", False)
                 
             if mpc_active:
                 actual_target_vel = global_mpc.target_vel
+            elif lqr_active:
+                actual_target_vel = global_lqr.target_vel
                 
             current_mpc_pred_vel = []
             current_mpc_voltage = 0.0
-            if mpc_active:
-                if not hasattr(modbus_polling_worker, "last_mpc_time"):
-                    modbus_polling_worker.last_mpc_time = 0
+            
+            # Execute either MPC or LQR
+            if mpc_active or lqr_active:
+                if not hasattr(modbus_polling_worker, "last_ctrl_time"):
+                    modbus_polling_worker.last_ctrl_time = 0
                 current_time = time.time()
-                if current_time - modbus_polling_worker.last_mpc_time >= 0.01:
-                    modbus_polling_worker.last_mpc_time = current_time
-                    # actual_current is in mA. The hardware sensor reads negative for positive torque, 
-                    # so we invert it to match the standard MPC physical model which expects positive current.
-                    voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, -actual_current / 1000.0)
+                if current_time - modbus_polling_worker.last_ctrl_time >= 0.01:
+                    modbus_polling_worker.last_ctrl_time = current_time
+                    
+                    if mpc_active:
+                        voltage, pred_vel, max_v = global_mpc.compute_step(actual_velocity, -modbus_polling_worker.filtered_current / 1000.0)
+                    else:
+                        voltage, pred_vel, max_v = global_lqr.compute_step(actual_velocity, -modbus_polling_worker.filtered_current / 1000.0)
+                        
                     pwm_val = int((voltage / max_v) * 4000.0)
-                    pwm_val = max(min(pwm_val, 4000), 0)
+                    pwm_val = max(min(pwm_val, 4000), -4000)
                     current_mpc_pred_vel = pred_vel
                     current_mpc_voltage = voltage
                     val = struct.unpack("<H", struct.pack("<h", pwm_val))[0]

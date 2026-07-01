@@ -48,7 +48,8 @@
                 <button id="btn-agent" onclick="switchTab('agent', -2)">Velocity-Agent</button>
                 <button id="btn-cur" onclick="switchTab('cur', -3)">Current</button>
                 <button id="btn-pwm" onclick="switchTab('pwm', 0)">PWM</button>
-                <button id="btn-mpc" onclick="switchTab('mpc', 3)">MPC</button>
+                <button id="btn-mpc" onclick="switchTab('mpc', parseInt(document.getElementById('mpcExecMode') ? document.getElementById('mpcExecMode').value : 3))">MPC</button>
+                <button id="btn-lqr" onclick="switchTab('lqr', 4)">LQR</button>
                 <button id="btn-tune" onclick="switchTab('tune', 0)">Auto-Tune</button>
                 <button id="btn-sysid" onclick="switchTab('sysid', 7)">SysID</button>
             </div>
@@ -192,6 +193,13 @@
 
             <div id="tab-mpc" class="tab-content">
                 <h3>Model Predictive Control (Velocity)</h3>
+                <div class="mb-4 text-sm">
+                    <strong>Execution Mode:</strong>
+                    <select id="mpcExecMode" onchange="updateMpcMode()" class="p-1 rounded-sm border-ccc">
+                        <option value="3">Firmware Natively (High-Speed)</option>
+                        <option value="9">Python Backend (Simulation)</option>
+                    </select>
+                </div>
                 <div class="glass-panel border-sky">
                     <strong class="text-sky">MPC Weights (Q & R)</strong><br>
                     <div class="grid-adrc">
@@ -216,6 +224,31 @@
                     <div class="grid-adrc">
                         <span class="font-bold text-xs">Vel (RPM)</span>
                         <input type="number" id="mpc_trg_vel" value="0" onkeydown="if(event.key==='Enter') setMPCTarget()">
+                    </div>
+                </div>
+            </div>
+
+            <div id="tab-lqr" class="tab-content">
+                <h3>Linear-Quadratic Regulator (LQR)</h3>
+                <div class="glass-panel border-sky">
+                    <strong class="text-sky">LQR Weights (Q & R)</strong><br>
+                    <div class="grid-adrc">
+                        <span class="font-bold text-xs">Q Velocity</span>
+                        <input type="number" id="lqr_q_vel" step="0.1" value="1.0" onkeydown="if(event.key==='Enter') setLQR()">
+
+                        <span class="font-bold text-xs">Q Current</span>
+                        <input type="number" id="lqr_q_cur" step="0.1" value="0.0" onkeydown="if(event.key==='Enter') setLQR()">
+
+                        <span class="font-bold text-xs">R Control</span>
+                        <input type="number" id="lqr_r_ctrl" step="0.01" value="1.0" onkeydown="if(event.key==='Enter') setLQR()">
+                    </div>
+                </div>
+                
+                <div class="glass-panel border-emerald">
+                    <strong class="text-emerald">Targets</strong><br>
+                    <div class="grid-adrc">
+                        <span class="font-bold text-xs">Vel (RPM)</span>
+                        <input type="number" id="lqr_trg_vel" value="0" onkeydown="if(event.key==='Enter') setLQRTarget()">
                     </div>
                 </div>
             </div>
@@ -376,6 +409,11 @@
         let isConnected = false;
         let chartWindowSec = 30;
 
+        async function updateMpcMode() {
+            const mode = parseInt(document.getElementById('mpcExecMode').value);
+            await fetch('/set_op_mode', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode: mode }) });
+        }
+
         function updateChartWindow() {
             chartWindowSec = parseInt(document.getElementById('chartWindowSec').value) || 30;
 
@@ -458,7 +496,7 @@
             const timeSeriesRight = document.getElementById('timeSeriesChartsRight');
             const mpcChartsRight = document.getElementById('mpcChartsRight');
             if (timeSeriesRight && mpcChartsRight) {
-                if (tabPrefix === 'mpc') {
+                if (tabPrefix === 'mpc' || tabPrefix === 'lqr') {
                     timeSeriesRight.style.display = 'none';
                     mpcChartsRight.style.display = 'flex';
                     mpcChartsRight.style.flexDirection = 'column';
@@ -554,6 +592,21 @@
             const target_cur = 0.0; // Automatically calculated by MPC
             const payload = { target_pos: target_pos, target_vel: target_vel, target_cur: target_cur };
             await fetch('/set_mpc_target', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        }
+
+        async function setLQR() {
+            const q_vel = parseFloat(document.getElementById('lqr_q_vel').value) || 0;
+            const q_cur = parseFloat(document.getElementById('lqr_q_cur').value) || 0.0;
+            const r_ctrl = parseFloat(document.getElementById('lqr_r_ctrl').value) || 0;
+            const payload = { q_vel: q_vel, q_cur: q_cur, r_ctrl: r_ctrl };
+            await fetch('/set_lqr', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        }
+
+        async function setLQRTarget() {
+            const target_vel = parseFloat(document.getElementById('lqr_trg_vel').value) || 0;
+            const target_cur = 0.0; // Automatically calculated by LQR
+            const payload = { target_vel: target_vel, target_cur: target_cur };
+            await fetch('/set_lqr_target', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         }
 
         function exportCSV() {

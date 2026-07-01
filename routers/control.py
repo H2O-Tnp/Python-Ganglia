@@ -7,6 +7,7 @@ from config import *
 from models import *
 from modbus_handler import get_modbus, active_ws_queues, active_ws_queues_lock, agent_state, agent_state_lock
 from mpc_controller import global_mpc
+from lqr_controller import global_lqr
 
 router = APIRouter()
 
@@ -64,9 +65,10 @@ def set_op_mode(req: OpModeRequest):
         modbus_client.write_coil(6,  req.mode == -3, device_id=device_id)
         
         with agent_state_lock:
-            agent_state["mpc_active"] = (req.mode == 3)
+            agent_state["mpc_active"] = (req.mode == 9)
+            agent_state["lqr_active"] = (req.mode == 4)
             
-        hardware_mode = 0 if req.mode == 3 else req.mode
+        hardware_mode = 0 if req.mode in (9, 4) else req.mode
         mode_val = struct.unpack("<H", struct.pack("<h", hardware_mode))[0]
         modbus_client.write_register(ADDR_OP_MODE, mode_val, device_id=device_id)
 
@@ -125,9 +127,14 @@ def set_adrc(req: ADRCRequest):
 @router.post("/set_mpc")
 def set_mpc(req: MPCRequest):
     global_mpc.update_params(req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon)
-    # Note: We intentionally do NOT send this to the real hardware over Modbus.
-    # The MPC logic runs entirely in Python. Writing to unmapped registers (e.g. 400) 
-    # causes a buffer overflow and HardFault on the real hardware.
+    modbus_client, device_id, modbus_lock = get_modbus()
+    with modbus_lock:
+        if modbus_client and modbus_client.connected:
+            # pack: float, float, float, float, int32, float, float, float
+            # q_pos, q_vel, q_cur, r_ctrl, horizon, 0.0, 0.0, 0.0
+            packed_bytes = struct.pack("<ffffifff", req.q_pos, req.q_vel, req.q_cur, req.r_ctrl, req.horizon, 0.0, 0.0, 0.0)
+            registers = struct.unpack("<16H", packed_bytes)
+            modbus_client.write_registers(address=ADDR_MPC_SETTINGS, values=list(registers), device_id=device_id)
     return {"status": "success"}
 
 @router.post("/set_rpm_cap")
@@ -141,9 +148,25 @@ def set_mpc_target(req: MPCTargetRequest):
     cap = agent_state.get("rpm_cap", 4000.0)
     target_vel = max(-cap, min(cap, req.target_vel))
     global_mpc.update_target(req.target_pos, target_vel, req.target_cur)
-    # Note: We intentionally do NOT send this to the real hardware over Modbus.
-    # The MPC logic runs entirely in Python. Writing to unmapped registers (e.g. 410) 
-    # causes a buffer overflow and HardFault on the real hardware.
+    modbus_client, device_id, modbus_lock = get_modbus()
+    with modbus_lock:
+        if modbus_client and modbus_client.connected:
+            packed_bytes = struct.pack("<fff", req.target_pos, target_vel, req.target_cur)
+            registers = struct.unpack("<6H", packed_bytes)
+            # target_pos is at offset 20 bytes from start, so 10 registers from ADDR_MPC_SETTINGS
+            modbus_client.write_registers(address=ADDR_MPC_SETTINGS + 10, values=list(registers), device_id=device_id)
+    return {"status": "success"}
+
+@router.post("/set_lqr")
+def set_lqr(req: LQRRequest):
+    global_lqr.update_params(req.q_vel, req.q_cur, req.r_ctrl)
+    return {"status": "success"}
+
+@router.post("/set_lqr_target")
+def set_lqr_target(req: LQRTargetRequest):
+    cap = agent_state.get("rpm_cap", 4000.0)
+    target_vel = max(-cap, min(cap, req.target_vel))
+    global_lqr.update_target(target_vel, req.target_cur)
     return {"status": "success"}
 
 @router.post("/set_target")
